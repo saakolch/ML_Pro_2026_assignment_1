@@ -4,24 +4,6 @@ FastAPI-сервис вокруг Ridge-регрессии (датасет Resea
 
 ## Проверка — три команды сверху вниз
 
-Нужны установленные: `uv`, `docker`, `kind`, `kubectl`, `k9s`.
-
-## Скрины-доказательства
-
-- терминал с выводом `uv run pytest`
-![alt text](image.png)
-
-- SELECT из таблицы логов (compose)
-![alt text](image-1.png)
-
-- `kubectl get pods` (2/2 Running) + ответ `/v1/predict` через port-forward
-![alt text](image-2.png)
-![alt text](image-3.png)
-
-- k9s с подами (`:pods` или `:xray deploy`)
-![alt text](image-4.png)
-
-
 ### 1. Тесты
 
 ```
@@ -47,28 +29,48 @@ kubectl rollout status deployment/grade-perform-api
 kubectl get pods
 
 kubectl port-forward service/grade-perform-api 8001:8000
+
 В отдельном терминале:
-```
 Invoke-RestMethod -Uri http://127.0.0.1:8001/v1/predict -Method Post -ContentType "application/json" -Body (Get-Content -Raw sample_request.json)
 ```
 
+## Скрины-доказательства
+
+- терминал с выводом `uv run pytest`
+
+![alt text](images/image.png)
+
+- SELECT из таблицы логов (compose)
+
+![alt text](images/image-1.png)
+
+- `kubectl get pods` (2/2 Running) + ответ `/v1/predict` через port-forward
+
+![alt text](images/image-2.png)
+![alt text](images/image-3.png)
+
+- k9s с подами (`:pods` или `:xray deploy`)
+
+![alt text](images/image-4.png)
+
+
 ### Журнал проблем
 
-![alt text](image-5.png)
+![alt text](images/image-5.png)
 -> Я создал экземпляр `features = Features()` в файле `features.py`, а затем выполнил импорт `from grade_perform.features import features` - ошибка, поэтому мне нужно импортировать только класс `Features` из `grade_perform.features`
 
-![alt text](image-6.png)
+![alt text](images/image-6.png)
 -> Выключил впн
 
-![alt text](image-7.png)
+![alt text](images/image-7.png)
 -> Попросил ИИ, исправление через `Set-DnsClientServerAddress -InterfaceAlias ​​"WLAN (Realtek WiFi)" -ServerAddresses 1.1.1.1,8.8.8.8`
 `Clear-DnsClientCache`
 
-![alt text](image-8.png)
+![alt text](images/image-8.png)
 -> Использовал команду `docker pull python:3.11-slim`
 
-![alt text](image-9.png)
+![alt text](images/image-9.png)
 -> Очень долгая загрузка - сменить с COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv на COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv в dockerfile
 
-![alt text](image-10.png)
+![alt text](images/image-10.png)
 -> положил COPY README ниже RUN
