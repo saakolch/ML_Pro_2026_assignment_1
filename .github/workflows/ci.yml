@@ -97,7 +97,7 @@ jobs:
 
       - name: smoke
         run: |
-          kubectl port-forward svc/grade-perform-api 8080:8000 &
+          kubectl port-forward svc/grade-perform-api 8080:800 &
           sleep 5
 
           curl --fail -s localhost:8080/health; echo
