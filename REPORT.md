@@ -55,7 +55,7 @@ https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36324012034
 ## Errors
 
 #### порт сменить с 8080:80 на 8080:8000, сервис сидит на 8000
-![settings](images/settigns.png)
+![settings](images/settings.png)
 
 #### не добавил пароль в сетинги
 
