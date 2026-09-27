@@ -77,7 +77,7 @@ jobs:
           kind load docker-image "$IMAGE" --name ci
 
       - name: taking secrets
-        env:
+        env: 
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           kubectl create secret generic grade-perform-secrets \

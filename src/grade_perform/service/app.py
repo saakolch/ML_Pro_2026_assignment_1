@@ -90,6 +90,6 @@ async def validation_exception_handler(request: Request, err: RequestValidationE
     except psycopg.Error as db_err:
         print(f"Failed logging 422 to DB: {db_err}")
 
-    return JSONResponse(status_code=422, content={"details": error_details})
+    return JSONResponse(status_code=422, content={"details": error_details, "request_id": request_id})
 
 
