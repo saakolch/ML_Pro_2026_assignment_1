@@ -1,20 +1,19 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-from pydantic import BaseModel
-
-
-import joblib
 import time
 import uuid
+from contextlib import asynccontextmanager
+
+import joblib
 import pandas as pd
+import psycopg
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
-from psycopg.types.json import Json
-
+from grade_perform import db
 from grade_perform.config import settings
 from grade_perform.features import Features
-from grade_perform import db
+
 
 class Prediction(BaseModel):
     model_config = {"protected_namespaces": ()}
@@ -33,8 +32,8 @@ async def lifespan(app: FastAPI):
         app.state.meta = bundle["metadata"]
         app.state.version = str(bundle["metadata"].get("version"))
 
-    except Exception as e:
-        print("there is no model")
+    except Exception as e: # noqa: BLE001
+        print(f"there is no model, error: {e}")
         #app.state.pipeline = None @check if comment will breal anything
 
     db.init() 
@@ -80,7 +79,7 @@ async def validation_exception_handler(request: Request, err: RequestValidationE
     try:
         raw_body = await request.json()
 
-    except Exception:
+    except ValueError:
         raw_body = {"error": "Invalid json input"}
 
     error_details = str(err.errors())
@@ -88,7 +87,7 @@ async def validation_exception_handler(request: Request, err: RequestValidationE
 
     try:
         db.save_predictions(request_id=request_id, model_version=app.state.version, features=raw_body, prediction=-1.0, latency_ms=latency_ms, response_code=422)
-    except Exception as db_err:
+    except psycopg.Error as db_err:
         print(f"Failed logging 422 to DB: {db_err}")
 
     return JSONResponse(status_code=422, content={"details": error_details})
