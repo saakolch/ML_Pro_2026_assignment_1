@@ -28,7 +28,7 @@ spec:
               command: ["pg_isready", "-U", "postgres"]
             periodSeconds: 3
           resources:
-            requests: {cpu: 100m, memory: 128Mi}
+            requests: {cpu: 100m, memory: 128000000Mi}
             limits: {memory: 256Mi}
 ---
 apiVersion: v1

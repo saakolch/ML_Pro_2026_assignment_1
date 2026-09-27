@@ -19,5 +19,7 @@ pull: https://github.com/saakolch/ML_Pro_2026_assignment_1/pull/1
 ## 2.3 Broken secret 
 
 red: https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36326046542/job/108639065980
+-> deploy is red, можно видеть через kubectl logs <pod-name>
 
-green: 
+green: https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36326320274
+
