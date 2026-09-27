@@ -4,5 +4,5 @@ metadata:
   name: grade-perform-config
 data:
   LOG_LEVEL: "INFO"
-  MODEL_PATH: artifact/ridge_model_no.joblib
+  MODEL_PATH: artifact/ridge_model.joblib
   
