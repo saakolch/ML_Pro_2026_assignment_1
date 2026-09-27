@@ -19,6 +19,12 @@ spec:
           image: grade-perform:hw1
           ports:
             - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: grade-perform-secrets
+                  key: DATABASE_URL
           startupProbe:
             httpGet:
               path: /health
