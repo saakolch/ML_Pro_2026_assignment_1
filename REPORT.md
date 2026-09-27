@@ -11,7 +11,13 @@ https://github.com/saakolch/ML_Pro_2026_assignment_1/pkgs/container/ml_pro_2026_
 
 pull: https://github.com/saakolch/ML_Pro_2026_assignment_1/pull/1
 
-## Changing model path in configMap
+## 2.3  Changing model path in configMap
 
 ### Поменял ссылку, но ничего не сломалось, не очень понимаю почему, но думаю, что ссылка тащится из конфига 
 ![alt text](images/configMap_error.png)
+
+## 2.3 Broken secret 
+
+red: https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36326046542/job/108639065980
+
+green: 

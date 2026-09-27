@@ -22,7 +22,7 @@ spec:
               value: grade-perform
             - name: POSTGRES_PASSWORD
               valueFrom:
-                secretKeyRef: {name: grade-perform-secrets-missed, key: POSTGRES_PASSWORD}
+                secretKeyRef: {name: grade-perform-secrets, key: POSTGRES_PASSWORD}
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "postgres"]
