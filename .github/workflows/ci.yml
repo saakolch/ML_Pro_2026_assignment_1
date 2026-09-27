@@ -93,11 +93,11 @@ jobs:
         run: |
           kubectl apply -f k8s/
           kubectl set image deploy/grade-perform-api api="$IMAGE"
-          kubectl rollout status deploy/churn-service --timeout=120s
+          kubectl rollout status deploy/grade-perform-api --timeout=120s
 
       - name: smoke
         run: |
-          kubectl port-forward svc/churn-service 8080:80 &
+          kubectl port-forward svc/grade-perform-api 8080:80 &
           sleep 5
 
           curl --fail -s localhost:8080/health; echo
