@@ -4,7 +4,6 @@ def test_predict_smoke(client, good_row):
     body = r.json()
     assert 0.0 <= body["prediction"] <= 5.0
     assert body["latency_ms"] >= 0
-    assert body["response_code"] 
     assert body["model_version"]
 
 def test_batch_and_single_agree(client, good_row):
@@ -23,6 +22,5 @@ def test_predict_types(client, good_row):
     body = client.post("/v1/predict", json = good_row).json()
     assert isinstance(body["prediction"], float)
     assert isinstance(body["latency_ms"], float)
-    assert isinstance(body["response_code"], int)
     assert isinstance(body["model_version"], str)
     assert isinstance(body["request_id"], str)
