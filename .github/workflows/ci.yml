@@ -10,14 +10,14 @@ jobs:
     services:
       postgres:
         image: postgres:16
-        env: {POSTGRES_PASSWORD: test, POSTGRES_DB: grade_perform}
+        env: {POSTGRES_PASSWORD: test, POSTGRES_DB: grade-perform}
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 3s --health-retries 10
       
     env:
-      DATABASE_URL: postgresql://postgres:test@localhost:5432/grade_perform
+      DATABASE_URL: postgresql://postgres:test@localhost:5432/grade-perform
 
 
     steps:
@@ -80,9 +80,9 @@ jobs:
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          kubectl create secret generic grade_perform-secrets \
+          kubectl create secret generic grade-perform-secrets \
           --from-literal=POSTGRES_PASSWORD="$DB_PASSWORD" \
-          --from-literal=DATABASE_URL="postgresql://postgres:$DB_PASSWORD@postgres:5432/grade_perform"
+          --from-literal=DATABASE_URL="postgresql://postgres:$DB_PASSWORD@postgres:5432/grade-perform"
       
       - name: database
         run: |
