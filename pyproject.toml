@@ -26,6 +26,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "dvc>=3.67.1",
     "locust>=2.46.6",
     "matplotlib>=3.11.2",
     "pytest>=9.1.1",
