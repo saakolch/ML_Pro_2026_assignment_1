@@ -5,4 +5,7 @@ metadata:
 data:
   LOG_LEVEL: "INFO"
   MODEL_PATH: artifact/ridge_model.joblib
+  MODEL_NAME: "grade_perform"
+  MODEL_ALIAS: "champion"
+  MLFLOW_TRACKING_URI: "http://mlflow.grade-mlops.svc.cluster.local:5000"
   

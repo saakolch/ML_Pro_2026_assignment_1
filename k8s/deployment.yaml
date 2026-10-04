@@ -23,8 +23,11 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: grade-perform-secrets
+                  name: app-db-credentials
                   key: DATABASE_URL
+          envFrom:
+            - configMapRef:
+                name: grade-perform-config
           startupProbe:
             httpGet:
               path: /health
