@@ -1,6 +1,3 @@
-import json
-import random
-
 from locust import HttpUser, between, task
 
 PAYLOAD = {
