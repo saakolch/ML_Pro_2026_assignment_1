@@ -72,7 +72,8 @@ jobs:
 
       - name: образ в кластер
         run: |
-          docker build -t "$IMAGE" .
+          # host-сеть: PyPI отдаёт IPv6, которого нет у контейнеров сборки
+          docker build --network=host -t "$IMAGE" .
           docker save "$IMAGE" | docker exec -i "$KIND_CLUSTER-control-plane" ctr --namespace=k8s.io images import --all-platforms --digests -
 
       - name: секреты
