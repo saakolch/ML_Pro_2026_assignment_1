@@ -24,3 +24,11 @@ def test_predict_types(client, good_row):
     assert isinstance(body["latency_ms"], float)
     assert isinstance(body["model_version"], str)
     assert isinstance(body["request_id"], str)
+
+def test_metrics_expose_model_version(client):
+    # проверяем метрику версии модели, а не счётчик запросов: у свежеперезапущенного
+    # пода запросов может быть ноль, а версия выставляется при старте всегда
+    r = client.get("/metrics")
+    assert r.status_code == 200
+    assert "grade_perform_model_info" in r.text
+    assert 'version="' in r.text

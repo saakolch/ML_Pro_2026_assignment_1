@@ -2,10 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   name: grade-perform-api
+  # ServiceMonitor ищет Сервис по его меткам (не по меткам подов)
+  labels:
+    app: grade-perform-api
 spec:
   selector:
     app: grade-perform-api
   ports:
-    - port: 8000
+    # имя порта нужно, чтобы ServiceMonitor ссылался на него как "port: http"
+    - name: http
+      port: 8000
       targetPort: 8000
   type: ClusterIP

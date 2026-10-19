@@ -1,6 +1,10 @@
 services:
   api:
-    build: . 
+    # PyPI отдаёт IPv6, которого нет у контейнеров сборки ("Network is unreachable");
+    # host-сеть использует стек VM с рабочим IPv4
+    build:
+      context: .
+      network: host
     ports: [8000:8000]
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@db:5432/grade_perform"

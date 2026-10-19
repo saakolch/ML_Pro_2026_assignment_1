@@ -1,0 +1,16 @@
+# Prometheus Operator находит Сервис с меткой app: grade-perform-api и раз в 15 секунд
+# забирает /metrics с порта http. Работает из любого namespace: в monitoring-values.yaml
+# выставлен serviceMonitorSelectorNilUsesHelmValues: false.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: grade-perform-api
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: grade-perform-api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

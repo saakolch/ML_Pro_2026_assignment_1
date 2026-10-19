@@ -20,15 +20,16 @@ CREATE TABLE IF NOT EXISTS predictions (
 def init():
     if not settings.database_url:
         return print("no url for db is provided")
-    
-    with psycopg.connect(settings.database_url) as conn:
+
+    # connect_timeout: без него недоступный DB вешает подключение навсегда
+    with psycopg.connect(settings.database_url, connect_timeout=5) as conn:
         conn.execute(DDL)
 
 def save_predictions(request_id, model_version, features, prediction, latency_ms, response_code):
     if not settings.database_url:
         return print("no url for db is provided")
 
-    with psycopg.connect(settings.database_url) as conn:
+    with psycopg.connect(settings.database_url, connect_timeout=5) as conn:
         conn.execute(
             "INSERT INTO predictions (request_id, model_version, features, prediction, latency_ms, response_code) "
             "VALUES (%s, %s, %s, %s, %s, %s)",
