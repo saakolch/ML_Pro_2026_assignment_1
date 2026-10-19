@@ -1,13 +1,18 @@
+import json
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import joblib
+import mlflow
+import mlflow.sklearn
 import pandas as pd
 import psycopg
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from mlflow import MlflowClient
 from pydantic import BaseModel
 
 from grade_perform import db
@@ -26,15 +31,31 @@ class Prediction(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        bundle = joblib.load(settings.model_path) #btw why setting has a link but not a package - so will it break docker?
-        app.state.pipeline = bundle["pipeline"]
-        app.state.meta = bundle["metadata"]
-        app.state.version = str(bundle["metadata"].get("version"))
+    if settings.model_name:
+        try:
+            mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+            client = MlflowClient()
+            mv = client.get_model_version_by_alias(settings.model_name, settings.model_alias)
+            app.state.pipeline = mlflow.sklearn.load_model(
+                f"models:/{settings.model_name}@{settings.model_alias}"
+            )
+            meta_path = client.download_artifacts(mv.run_id, "metadata.json")
+            app.state.meta = json.loads(Path(meta_path).read_text(encoding="utf-8"))
+            app.state.version = f"registry-v{mv.version}"
 
-    except Exception as e: # noqa: BLE001
-        print(f"there is no model, error: {e}")
-        #app.state.pipeline = None @check if comment will breal anything
+        except Exception as e:  # noqa: BLE001
+            print(f"registry load failed, error: {e}")
+
+    else:
+        try:
+            bundle = joblib.load(settings.model_path) #btw why setting has a link but not a package - so will it break docker?
+            app.state.pipeline = bundle["pipeline"]
+            app.state.meta = bundle["metadata"]
+            app.state.version = str(bundle["metadata"].get("version"))
+
+        except Exception as e: # noqa: BLE001
+            print(f"there is no model, error: {e}")
+            #app.state.pipeline = None @check if comment will breal anything
 
     db.init() 
 

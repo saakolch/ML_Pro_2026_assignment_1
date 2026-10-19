@@ -1,0 +1,14 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grade-perform-service
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: grade-perform.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: grade-perform-api, port: {number: 8000}}

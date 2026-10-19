@@ -54,61 +54,60 @@ jobs:
   
   deploy:
     needs: build
-    runs-on: ubuntu-latest
-
-    permissions: {contents: read, packages: read}
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, kind]
 
     steps:
       - uses: actions/checkout@v7
-      - run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:sha-${GITHUB_SHA}" >> "$GITHUB_ENV"
-      - uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: echo "IMAGE=grade-perform:sha-${GITHUB_SHA}" >> "$GITHUB_ENV"
 
-
-      - uses: helm/kind-action@v1
-        with: {cluster_name: ci}
+      - name: build image on the runner
+        run: |
+          docker build -t "$IMAGE" .
 
       - name: image to the cluster
         run: |
-          docker pull "$IMAGE"
-          kind load docker-image "$IMAGE" --name ci
+          docker save "$IMAGE" | docker exec -i kind-control-plane ctr --namespace=k8s.io images import --all-platforms --digests -
 
       - name: taking secrets
-        env: 
+        env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          kubectl create secret generic grade-perform-secrets \
-          --from-literal=POSTGRES_PASSWORD="$DB_PASSWORD" \
-          --from-literal=DATABASE_URL="postgresql://postgres:$DB_PASSWORD@postgres:5432/grade-perform"
-      
+          kubectl create secret generic ci-db-secrets \
+            --from-literal=POSTGRES_PASSWORD="$DB_PASSWORD" \
+            --from-literal=DATABASE_URL="postgresql://postgres:$DB_PASSWORD@postgres:5432/grade-perform" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic app-db-credentials \
+            --from-literal=POSTGRES_PASSWORD="$DB_PASSWORD" \
+            --from-literal=DATABASE_URL="postgresql://postgres:$DB_PASSWORD@postgres:5432/grade-perform" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: database
         run: |
           kubectl apply -f k8s/postgres.yaml
           kubectl rollout status deploy/postgres --timeout=180s
-      
+
       - name: service
         run: |
           kubectl apply -f k8s/
           kubectl set image deploy/grade-perform-api api="$IMAGE"
-          kubectl rollout status deploy/grade-perform-api --timeout=120s
+          kubectl rollout status deploy/grade-perform-api --timeout=180s
 
       - name: smoke
         run: |
-          kubectl port-forward svc/grade-perform-api 8080:8000 &
-          sleep 5
+          curl --fail -s http://grade-perform.localhost:30080/health | grep -q 'registry-v'
 
-          curl --fail -s localhost:8080/health; echo
-          curl --fail -s -X POST localhost:8080/v1/predict \
-            -H "Content-Type: application/json" -d @sample_request.json; echo
-          
+          R=$(curl --fail -s -X POST http://grade-perform.localhost:30080/v1/predict \
+            -H "Content-Type: application/json" -d @sample_request.json)
+          echo "$R"
+
+          echo "$R" | python3 -c "import json,sys; p=json.load(sys.stdin); assert 0 <= p['prediction'] <= 5, p"
+
           sleep 2
-
+          RID=$(echo "$R" | python3 -c "import json,sys; print(json.load(sys.stdin)['request_id'])")
           kubectl exec deploy/postgres -- psql -U postgres -d grade-perform \
-            -tc "SELECT count(*) FROM predictions" | grep -q 1
-      
+            -tc "SELECT count(*) FROM predictions WHERE request_id = '$RID'" | grep -q 1
+
       - name: diagnosis
         if: failure()
 
