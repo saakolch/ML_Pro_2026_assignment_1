@@ -18,7 +18,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-DATA_PATH = Path(os.getenv("DATA_PATH", "artifact/ResearchInformation3.csv"))
+DATA_PATH = Path(os.getenv("DATA_PATH", "datasets/ResearchInformation3.csv"))
 MODEL_NAME = os.getenv("MODEL_NAME", "grade_perform")
 EXPERIMENT = os.getenv("MLFLOW_EXPERIMENT", "grade_perform")
 ALPHA = float(os.getenv("RIDGE_ALPHA", "1.0"))

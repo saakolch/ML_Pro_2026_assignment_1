@@ -19,7 +19,7 @@ spec:
             - containerPort: 5432
           env:
             - name: POSTGRES_DB
-              value: grade-perform
+              value: grade_perform
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef: {name: app-db-credentials, key: POSTGRES_PASSWORD}

@@ -13,11 +13,19 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from mlflow import MlflowClient
+from prometheus_client import Gauge, Histogram
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 
 from grade_perform import db
 from grade_perform.config import settings
 from grade_perform.features import Features
+
+# замер scripts/latency_probe.py: p50=13.5мс p90=26мс p95=25мс p99=32мс max=56мс 
+LATENCY_BUCKETS = (0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.25, 0.5, 1)
+PREDICTION_BUCKETS = (0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5)  # шкала оценки 0..5
+MODEL_INFO = Gauge("grade_perform_model_info", "Model loaded by this pod", ["version"])
+PREDICTION = Histogram("grade_perform_prediction", "Predicted grade distribution", buckets=PREDICTION_BUCKETS)
 
 
 class Prediction(BaseModel):
@@ -42,6 +50,7 @@ async def lifespan(app: FastAPI):
             meta_path = client.download_artifacts(mv.run_id, "metadata.json")
             app.state.meta = json.loads(Path(meta_path).read_text(encoding="utf-8"))
             app.state.version = f"registry-v{mv.version}"
+            MODEL_INFO.labels(app.state.version).set(1)
 
         except Exception as e:  # noqa: BLE001
             print(f"registry load failed, error: {e}")
@@ -52,6 +61,7 @@ async def lifespan(app: FastAPI):
             app.state.pipeline = bundle["pipeline"]
             app.state.meta = bundle["metadata"]
             app.state.version = str(bundle["metadata"].get("version"))
+            MODEL_INFO.labels(app.state.version).set(1)
 
         except Exception as e: # noqa: BLE001
             print(f"there is no model, error: {e}")
@@ -62,6 +72,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+# latency_lowr_buckets - опечатка внутри самой библиотеки, так и надо
+Instrumentator().instrument(app, latency_lowr_buckets=LATENCY_BUCKETS).expose(app)
 
 @app.get("/health")
 def health_check():
@@ -86,6 +98,8 @@ def predict(features: Features, bg: BackgroundTasks) -> Prediction:
     overall = float(app.state.pipeline.predict(df)[0])
 
     latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+
+    PREDICTION.observe(overall)
 
     bg.add_task(db.save_predictions, request_id, app.state.version, features_clear, overall, latency_ms, 200)
 

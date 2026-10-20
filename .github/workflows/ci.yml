@@ -2,6 +2,7 @@ name: ci
 on:
   push: {branches: [main]}
   pull_request:
+  workflow_dispatch:
 
 jobs:
   tests:
@@ -15,7 +16,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 3s --health-retries 10
-      
+
     env:
       DATABASE_URL: postgresql://postgres:test@localhost:5432/grade-perform
 
@@ -27,7 +28,7 @@ jobs:
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run pytest
-  
+
   build:
     needs: tests
     if: github.ref == 'refs/heads/main'
@@ -49,79 +50,87 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE }}
-          cache-from: type=gha 
+          cache-from: type=gha
           cache-to: type=gha,mode=max
-  
+
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main'
+    # джоба идёт на runner'е на машине с kind, запускается вручную: кнопка Run workflow
+    if: github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, kind]
+    concurrency: {group: deploy-kind}
+    timeout-minutes: 20
+    defaults:
+      run:
+        # на Windows-runner'е "shell: bash" находит WSL-bash и падает ("exec(/bin/bash) failed");
+        # указываем Git Bash явно, 8.3-путь без пробелов
+        shell: C:\Progra~1\Git\bin\bash.exe {0}
+    env:
+      KIND_CLUSTER: sem4
 
     steps:
       - uses: actions/checkout@v7
       - run: echo "IMAGE=grade-perform:sha-${GITHUB_SHA}" >> "$GITHUB_ENV"
 
-      - name: build image on the runner
+      - name: образ в кластер
         run: |
-          docker build -t "$IMAGE" .
+          # host-сеть: PyPI отдаёт IPv6, которого нет у контейнеров сборки
+          docker build --network=host -t "$IMAGE" .
+          docker save "$IMAGE" | docker exec -i "$KIND_CLUSTER-control-plane" ctr --namespace=k8s.io images import --all-platforms --digests -
 
-      - name: image to the cluster
-        run: |
-          docker save "$IMAGE" | docker exec -i kind-control-plane ctr --namespace=k8s.io images import --all-platforms --digests -
-
-      - name: taking secrets
+      - name: секреты
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          kubectl create secret generic ci-db-secrets \
-            --from-literal=POSTGRES_PASSWORD="$DB_PASSWORD" \
-            --from-literal=DATABASE_URL="postgresql://postgres:$DB_PASSWORD@postgres:5432/grade-perform" \
-            --dry-run=client -o yaml | kubectl apply -f -
           kubectl create secret generic app-db-credentials \
             --from-literal=POSTGRES_PASSWORD="$DB_PASSWORD" \
-            --from-literal=DATABASE_URL="postgresql://postgres:$DB_PASSWORD@postgres:5432/grade-perform" \
+            --from-literal=DATABASE_URL="postgresql://postgres:$DB_PASSWORD@postgres:5432/grade_perform" \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: database
+      - name: база
         run: |
           kubectl apply -f k8s/postgres.yaml
           kubectl rollout status deploy/postgres --timeout=180s
 
-      - name: service
+      - name: сервис
         run: |
           kubectl apply -f k8s/
           kubectl set image deploy/grade-perform-api api="$IMAGE"
-          kubectl rollout status deploy/grade-perform-api --timeout=180s
+          kubectl rollout status deploy/grade-perform-api --timeout=300s
+
+      - name: мониторинг и DAG
+        run: |
+          kubectl apply -f k8s/monitoring/
+          kubectl -n grade-mlops create configmap airflow-dags --from-file=dags/ \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n grade-mlops exec deploy/airflow -- airflow variables set grade_perform_image "$IMAGE"
 
       - name: smoke
+        # через hostPort 80 узла kind: Host-заголовок роутит Traefik'ом, как ходят пользователи
         run: |
-          curl --fail -s http://grade-perform.localhost:30080/health | grep -q 'registry-v'
+          U="http://localhost:80"; H="Host: grade-perform.localhost"
 
-          R=$(curl --fail -s -X POST http://grade-perform.localhost:30080/v1/predict \
-            -H "Content-Type: application/json" -d @sample_request.json)
-          echo "$R"
+          curl --fail -s --retry 5 --retry-all-errors -H "$H" $U/health | tee health.json; echo
+          # пока MODEL_NAME пуст, версия из joblib; после первого успешного прогона DAG вернуть grep 'registry-v'
+          grep -q '"model_version":"' health.json
 
-          echo "$R" | python3 -c "import json,sys; p=json.load(sys.stdin); assert 0 <= p['prediction'] <= 5, p"
+          curl --fail -s -X POST -H "$H" $U/v1/predict \
+            -H "Content-Type: application/json" -d @sample_request.json | tee pred.json; echo
+
+          python -c "import json; p = json.load(open('pred.json')); assert 0 <= p['prediction'] <= 5, p"
 
           sleep 2
-          RID=$(echo "$R" | python3 -c "import json,sys; print(json.load(sys.stdin)['request_id'])")
-          kubectl exec deploy/postgres -- psql -U postgres -d grade-perform \
-            -tc "SELECT count(*) FROM predictions WHERE request_id = '$RID'" | grep -q 1
+          RID=$(python -c "import json; print(json.load(open('pred.json'))['request_id'])")
+          kubectl exec deploy/postgres -- psql -U postgres -d grade_perform \
+            -tAc "SELECT count(*) FROM predictions WHERE request_id = '$RID'" | grep -qx 1
 
-      - name: diagnosis
+          curl --fail -s -H "$H" $U/metrics | grep -q '^grade_perform_model_info{version="'
+
+      - name: диагностика
         if: failure()
-
         run: |
-          kubectl get pods -o wide
+          kubectl get pods -A -o wide
+          kubectl -n grade-mlops get secrets
+          kubectl get ingress -A
           kubectl describe deploy/grade-perform-api | tail -20
-          kubectl logs deploy/grade-perform-api --tail=30 || true
-
-      
-
-
-
-  
-
-
-     
-
+          kubectl logs deploy/grade-perform-api --tail=50 || true

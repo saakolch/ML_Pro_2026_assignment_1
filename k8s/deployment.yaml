@@ -28,6 +28,11 @@ spec:
           envFrom:
             - configMapRef:
                 name: grade-perform-config
+          # Airflow перезапускает сервис после переобучения: пауза даёт поду доработать
+          # уже принятые запросы, пока kubelet убирает его из эндпоинтов - иначе 5xx на графике
+          lifecycle:
+            preStop:
+              sleep: {seconds: 5}
           startupProbe:
             httpGet:
               path: /health
