@@ -62,7 +62,9 @@ jobs:
     timeout-minutes: 20
     defaults:
       run:
-        shell: bash
+        # на Windows-runner'е "shell: bash" находит WSL-bash и падает ("exec(/bin/bash) failed");
+        # указываем Git Bash явно, 8.3-путь без пробелов
+        shell: C:\Progra~1\Git\bin\bash.exe {0}
     env:
       KIND_CLUSTER: sem4
 
