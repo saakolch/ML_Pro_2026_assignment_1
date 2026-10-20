@@ -155,6 +155,11 @@ def main() -> dict:
         "promoted": promoted,
     }
     print(json.dumps(result, ensure_ascii=False))
+    # Airflow KubernetesPodOperator читает XCom из этого файла (синкар alpine раздаёт его по 8798);
+    # папка есть только в поде DAG'а, локально и в CI её нет - пишем только там
+    xcom = Path("/airflow/xcom")
+    if xcom.is_dir():
+        (xcom / "return.json").write_text(json.dumps(result))
     return result
 
 

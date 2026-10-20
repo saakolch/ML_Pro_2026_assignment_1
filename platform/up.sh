@@ -38,6 +38,7 @@ FOR_IMAGES=(
   "bats/bats:1.11.0"
   "quay.io/prometheus/prometheus:v3.14.0-distroless"
   "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.20.0"
+  "alpine:3.24.1"
 )
 
 for img in "${FOR_IMAGES[@]}"; do
