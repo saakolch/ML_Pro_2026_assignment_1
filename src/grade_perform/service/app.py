@@ -77,7 +77,12 @@ Instrumentator().instrument(app, latency_lowr_buckets=LATENCY_BUCKETS).expose(ap
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "model_version": getattr(app.state, "version", "not provided")}
+    # model_path наружу - чтобы было видно, что MODEL_PATH пришёл из ConfigMap, а не дефолт из config.py
+    return {
+        "status": "ok",
+        "model_version": getattr(app.state, "version", "not provided"),
+        "model_path": settings.model_path,
+    }
 
 @app.get("/ready")
 def ready_check():

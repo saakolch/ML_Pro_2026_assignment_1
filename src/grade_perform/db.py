@@ -23,6 +23,9 @@ def init():
 
     # connect_timeout: без него недоступный DB вешает подключение навсегда
     with psycopg.connect(settings.database_url, connect_timeout=5) as conn:
+        # при replicas: 2 и пустой базе оба пода делают CREATE TABLE одновременно
+        # и один может упасть на старте; advisory lock в транзакции делает инициализацию последовательной
+        conn.execute("SELECT pg_advisory_xact_lock(918273645)")
         conn.execute(DDL)
 
 def save_predictions(request_id, model_version, features, prediction, latency_ms, response_code):

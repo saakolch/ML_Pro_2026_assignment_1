@@ -32,13 +32,9 @@ green: https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/3632654
 ### Можно видеть через kubectl get pods для статуса, kubectl describe pod <pod-name> для шага диагностики, можно видеть само приложение через kubectl logs <pod-name>
 
 ### Questions
-1. 3 мин 37 сек для первого:
-https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36322402594
-2 мин 44 сек для второго
-https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36324012034 
-Слой из докера взят для файлов зависимостей потому что зависимости одинковые для обоих веток
+1. Время job build: 13 с и 19 с (прогоны https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36322402594 и https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36324012034) — слой зависимостей вынесен выше слоя кода, поэтому повторные сборки берут кэш слоёв; холодная сборка — 47 с (прогон https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36314772071). 3 мин 37 с и 2 мин 44 с — это время всего прогона вместе с тестами и deploy, а не сборки.
 
-2. Поды в ImagePullBackOff создаются процессом RollingUpdate, который запускает новую версию приложения, не отключая старые работающие поды. Пайплайн остается зеленым, потому что команда kubectl apply проверяет только успешную отправку конфиг в кластер, а не фактический запуск контейнеров.
+2. Поды в ImagePullBackOff — это поды СТАРОГО ReplicaSet с образом grade-perform:hw1: они остались после шага kubectl apply и до kubectl set image, RollingUpdate не удаляет старые поды сразу. Прогон остаётся зелёным, потому что kubectl apply проверяет только успешное применение конфигурации в кластер; за фактический запуск новых подов отвечает следующий шаг kubectl rollout status — вот он и ждёт/падает по таймауту, если новые поды не стали Ready.
 
 3. Пароль передается из GitHub Secrets в пайплайн, который создает объект Kubernetes Secret для безопасной подстановки в переменную окружения пода. Хранить его в ConfigMap нельзя из-за риска сливания данных при коммите в репозиторий.
 
@@ -48,7 +44,7 @@ https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/36324012034
 
 6. Блокировка предотвращает состояние race condition при одновременном запуске двух реплик приложения, без нее они обе попытались бы одновременно применить миграции к пустой базе данных и вызвали бы ошибку дублирования структур.
 
-7. Все красные прогоны в деплой, и ошибка с ссылкой на модель (которая у меня всё равно зеленая) это возможно ошибка будет старта, ошибка скачивания секретов для датабазы, ошибка выделения ресурсов будет на request с запросом памяти выше лимитов
+7. Все поломки видны красными в job deploy, и причина читается по логу шага, не заглядывая в diff: неверный путь к модели (ConfigMap) — под в CreateContainerConfigError/CrashLoopBackOff, причём kubectl logs при CreateContainerConfigError ничего не покажет (контейнер не создан) — смотрим kubectl describe pod; несовпадающее имя secretRef — та же картина с «secret not found» в describe; requests памяти больше, чем есть на узле, — под остаётся в Pending, в describe видно «Insufficient memory». Шаг диагностики в deploy печатает pods/decribe/logs автоматически при падении.
 
 
 ## Errors
