@@ -44,7 +44,11 @@ graph TD
 ### 1. Платформа: кластер, MLflow, Airflow, S3, мониторинг
 
 ```powershell
-& "C:\Program Files\Git\bin\bash.exe" platform/up.sh
+& "C:\Program Files\Git\bin\bash.exe" platform/up.sh   # PowerShell
+```
+
+```bash
+bash platform/up.sh   # Git Bash, macOS, Linux
 ```
 
 Поднимает kind-кластер `sem4` с портом 80, пре-загружает образы в узел, ставит MLflow, RustFS (S3), Airflow, Traefik, Prometheus и Grafana, создаёт бакет `dvc`. Занимает 5–15 минут; повторный запуск безопасен. Проверка: `kubectl get pods -A` — всё Running; `kubectl get ingress -A` — mlflow/airflow/s3/grade-perform/grafana.localhost.
@@ -53,7 +57,9 @@ graph TD
 
 ### 2. Данные в S3 и первый champion
 
-```powershell
+Команды одинаковы в PowerShell и bash:
+
+```
 uv sync
 uv add "dvc[s3]"
 uv run dvc remote add -d --force laptop s3://dvc
@@ -73,6 +79,10 @@ uv run dvc push
 
 ```powershell
 curl.exe -s -X POST http://grade-perform.localhost/v1/predict -H "Content-Type: application/json" -d @sample_request.json
+```
+
+```bash
+curl -s -X POST http://grade-perform.localhost/v1/predict -H "Content-Type: application/json" -d @sample_request.json
 ```
 
 ## Адреса интерфейсов
