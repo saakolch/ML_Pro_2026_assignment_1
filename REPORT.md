@@ -47,7 +47,7 @@
 | 3. DVC+S3 в кластере | `.dvc/config` (laptop+cluster → s3://dvc), указатель `datasets/ResearchInformation3.csv.dvc` в репо, `.dvc` папка: https://github.com/saakolch/ML_Pro_2026_assignment_1/tree/main/.dvc, бакет — image-15.png, Dockerfile: COPY .dvc/config + datasets/*.dvc + core.no_scm |
 | 4. Проверка данных (pandera, valid=false) | `src/grade_perform/data.py` (ROWS+EXPORT), тесты без датасета `tests/test_data.py` (3 шт), зелёный CI: https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/39270604387, MLflow validate valid=false + failure_cases.csv — image-15.png |
 | 5. Конвейер в Airflow (3 сценария) | `dags/grade_perform_retrain.py` (KubernetesPodOperator + dvc pull -r cluster + short_circuit + rollout); кейс 1 — image-17.png (все зелёные, rollout выполнен); кейс 2 — image-18.png (rollout skipped, только @challenger); кейс 3 — image-16.png (validate красный) + откат image-19.png (git revert b9ca85c, dvc checkout, reran); Model registry с aliases — image-20.png |
-| 6. CI/CD целиком (deploy на runner) | `deploy` на `[self-hosted, kind]`: секреты dry-run=client, база, сервис, «мониторинг и DAG» (ServiceMonitor+дашборд+ConfigMap DAG+переменная образа), smoke по Ingress |
+| 6. CI/CD целиком (deploy на runner) | `deploy` на `[self-hosted, kind]`: https://github.com/saakolch/ML_Pro_2026_assignment_1/actions/runs/39361233422 |
 
 ## Переделки (по фидбеку)
 
