@@ -7,7 +7,7 @@ data:
   MODEL_PATH: artifact/ridge_model.joblib
   # пусто -> сервис берёт модель из artifact/ridge_model.joblib внутри образа.
   # Когда DAG зарегистрирует модель в MLflow, вернуть "grade_perform"
-  MODEL_NAME: ""
+  MODEL_NAME: "grade_perform"
   MODEL_ALIAS: "champion-not-correct"
   MLFLOW_TRACKING_URI: "http://mlflow.grade-mlops.svc.cluster.local:5000"
   
